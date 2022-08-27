@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -23,6 +24,11 @@ public class InMemoryOrderRepository implements OrderRepository {
     }
 
     @Override
+    public Optional<Order> findById(Long id) {
+        return Optional.ofNullable(storage.get(id));
+    }
+
+    @Override
     public Order save(Order order) {
         if (order.getId() == null) {
             var id = idNextValue.getAndIncrement();
@@ -33,5 +39,10 @@ public class InMemoryOrderRepository implements OrderRepository {
             storage.put(order.getId(), order);
         }
         return order;
+    }
+
+    @Override
+    public void removeById(Long id) {
+        storage.remove(id);
     }
 }

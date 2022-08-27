@@ -21,4 +21,18 @@ public class PlaceOrderService implements PlaceOrderUseCase {
         orderRepository.save(order);
         return PlaceOrderResponse.successResponse(order.getId());
     }
+
+    @Override
+    public UpdateStatusResponse updateStatus(UpdateStatusCommand command) {
+        return orderRepository.findById(command.id()).map(order -> {
+            order.setStatus(command.status());
+            orderRepository.save(order);
+            return UpdateStatusResponse.SUCCESS;
+        }).orElseGet(() -> UpdateStatusResponse.errorResponse("Order not found"));
+    }
+
+    @Override
+    public void removeById(Long id) {
+        orderRepository.removeById(id);
+    }
 }

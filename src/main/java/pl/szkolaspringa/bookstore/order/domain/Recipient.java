@@ -1,16 +1,11 @@
 package pl.szkolaspringa.bookstore.order.domain;
 
 import lombok.Builder;
-import lombok.Data;
-import lombok.Value;
 
-@Data
+import javax.validation.constraints.NotBlank;
+
 @Builder
-public class Recipient {
-    private String name;
-    private String phone;
-    private String street;
-    private String city;
-    private String zipCode;
-    private String email;
+public record Recipient(
+        @NotBlank String name, @NotBlank String phone, @NotBlank String street, @NotBlank String city,
+        @NotBlank String zipCode, @NotBlank String email) {
 }
