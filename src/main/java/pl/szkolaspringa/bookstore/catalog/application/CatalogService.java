@@ -5,16 +5,20 @@ import org.springframework.stereotype.Service;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase;
 import pl.szkolaspringa.bookstore.catalog.domain.Book;
 import pl.szkolaspringa.bookstore.catalog.domain.CatalogRepository;
+import pl.szkolaspringa.bookstore.upload.application.port.UploadUseCase;
+import pl.szkolaspringa.bookstore.upload.application.port.UploadUseCase.SaveUploadCommand;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 @Service
 @RequiredArgsConstructor
 public class CatalogService implements CatalogUseCase {
 
     private final CatalogRepository catalogRepository;
+    private final UploadUseCase uploadUseCase;
 
     @Override
     public List<Book> findAll() {
@@ -22,38 +26,51 @@ public class CatalogService implements CatalogUseCase {
     }
 
     @Override
-    public List<Book> findByAuthor(String name) {
+    public List<Book> findAllByAuthor(String author) {
         return catalogRepository.findAll().stream()
-                .filter(book -> book.getAuthor().startsWith(name))
-                .collect(Collectors.toList());
+                .filter(book -> startsWithLowerCase(book.getAuthor(), author))
+                .collect(toList());
     }
 
     @Override
-    public List<Book> findByTitle(String title) {
+    public List<Book> findAllByTitle(String title) {
         return catalogRepository.findAll().stream()
-                .filter(book -> book.getTitle().startsWith(title))
-                .collect(Collectors.toList());
+                .filter(book -> startsWithLowerCase(book.getTitle(), title))
+                .collect(toList());
     }
 
     @Override
-    public Optional<Book> findByTitleAndAuthor(String title, String author) {
+    public List<Book> findAllByTitleAndAuthor(String title, String author) {
         return catalogRepository.findAll().stream()
-                .filter(book -> book.getTitle().startsWith(title))
-                .filter(book -> book.getAuthor().startsWith(author))
-                .findAny();
+                .filter(book -> startsWithLowerCase(book.getTitle(), title))
+                .filter(book -> startsWithLowerCase(book.getAuthor(), author))
+                .collect(toList());
+    }
+
+    @Override
+    public Optional<Book> findOneById(Long id) {
+        return catalogRepository.findById(id);
     }
 
     @Override
     public Optional<Book> findOneByTitle(String title) {
         return catalogRepository.findAll().stream()
-                .filter(book -> book.getTitle().startsWith(title))
+                .filter(book -> startsWithLowerCase(book.getTitle(), title))
                 .findAny();
     }
 
     @Override
-    public void addBook(AddBookCommand command) {
+    public Optional<Book> findOneByTitleAndAuthor(String title, String author) {
+        return catalogRepository.findAll().stream()
+                .filter(book -> startsWithLowerCase(book.getTitle(), title))
+                .filter(book -> startsWithLowerCase(book.getAuthor(), author))
+                .findAny();
+    }
+
+    @Override
+    public Book addBook(AddBookCommand command) {
         var book = new Book(command.title(), command.author(), command.year(), command.price());
-        catalogRepository.save(book);
+        return catalogRepository.save(book);
     }
 
     @Override
@@ -69,5 +86,31 @@ public class CatalogService implements CatalogUseCase {
     @Override
     public void removeById(Long id) {
         catalogRepository.removeById(id);
+    }
+
+    @Override
+    public void updateBookCover(UpdateBookCoverCommand command) {
+        catalogRepository.findById(command.id()).ifPresent(book -> {
+            var cmd = new SaveUploadCommand(command.fileName(), command.file(), command.contentType());
+            var saved = uploadUseCase.save(cmd);
+            book.setCoverId(saved.id());
+            catalogRepository.save(book);
+        });
+    }
+
+    @Override
+    public void removeBookCover(Long id) {
+        catalogRepository.findById(id).ifPresent(book -> {
+            Optional.ofNullable(book.getCoverId()).ifPresent(coverId -> {
+                uploadUseCase.removeById(coverId);
+                book.setCoverId(null);
+                catalogRepository.save(book);
+            });
+
+        });
+    }
+
+    private static boolean startsWithLowerCase(String text, String prefix) {
+        return text.toLowerCase().startsWith(prefix.toLowerCase());
     }
 }

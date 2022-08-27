@@ -14,19 +14,27 @@ public interface CatalogUseCase {
 
     List<Book> findAll();
 
-    List<Book> findByAuthor(String name);
+    List<Book> findAllByAuthor(String name);
 
-    List<Book> findByTitle(String title);
+    List<Book> findAllByTitle(String title);
 
-    Optional<Book> findByTitleAndAuthor(String title, String author);
+    List<Book> findAllByTitleAndAuthor(String title, String author);
+
+    Optional<Book> findOneById(Long id);
 
     Optional<Book> findOneByTitle(String title);
 
-    void addBook(AddBookCommand command);
+    Optional<Book> findOneByTitleAndAuthor(String title, String author);
+
+    Book addBook(AddBookCommand command);
 
     UpdateBookResponse updateBook(UpdateBookCommand command);
 
     void removeById(Long id);
+
+    void updateBookCover(UpdateBookCoverCommand command);
+
+    void removeBookCover(Long id);
 
     record AddBookCommand(String title, String author, Integer year, BigDecimal price) {
     }
@@ -47,5 +55,8 @@ public interface CatalogUseCase {
         public static UpdateBookResponse errorResponse(String... errors) {
             return new UpdateBookResponse(false, Arrays.asList(errors));
         }
+    }
+
+    record UpdateBookCoverCommand(Long id, byte[] file, String contentType, String fileName) {
     }
 }

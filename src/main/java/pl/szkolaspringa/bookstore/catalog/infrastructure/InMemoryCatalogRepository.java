@@ -27,7 +27,7 @@ class InMemoryCatalogRepository implements CatalogRepository {
     }
 
     @Override
-    public void save(Book book) {
+    public Book save(Book book) {
         if (book.getId() == null) {
             var id = idNextValue.getAndIncrement();
             book.setId(id);
@@ -35,6 +35,7 @@ class InMemoryCatalogRepository implements CatalogRepository {
         } else {
             storage.put(book.getId(), book);
         }
+        return book;
     }
 
     @Override

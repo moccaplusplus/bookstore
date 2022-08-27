@@ -64,18 +64,18 @@ public class ApplicationRunner implements CommandLineRunner {
     }
 
     private void printByTitle() {
-        var books = catalogUseCase.findByTitle(query);
+        var books = catalogUseCase.findAllByTitle(query);
         books.stream().limit(limit).forEach(System.out::println);
     }
 
     private void printByAuthor() {
         System.out.println("Find by author: \"Henryk\"");
-        var books = catalogUseCase.findByAuthor("Henryk");
+        var books = catalogUseCase.findAllByAuthor("Henryk");
         books.forEach(System.out::println);
     }
 
     private void findAndUpdate() {
-        var status = catalogUseCase.findByTitleAndAuthor("Pan Tadeusz", "Adam Mickiewicz")
+        var status = catalogUseCase.findOneByTitleAndAuthor("Pan Tadeusz", "Adam Mickiewicz")
                 .map(book -> UpdateBookCommand.builder()
                         .id(book.getId())
                         .title("Pan Tadeusz, czyli Ostatni Zajazd na Litwie")

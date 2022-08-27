@@ -23,7 +23,7 @@ public class InMemoryOrderRepository implements OrderRepository {
     }
 
     @Override
-    public void save(Order order) {
+    public Order save(Order order) {
         if (order.getId() == null) {
             var id = idNextValue.getAndIncrement();
             order.setId(id);
@@ -32,5 +32,6 @@ public class InMemoryOrderRepository implements OrderRepository {
         } else {
             storage.put(order.getId(), order);
         }
+        return order;
     }
 }
