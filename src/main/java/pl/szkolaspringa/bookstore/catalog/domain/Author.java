@@ -14,9 +14,7 @@ import javax.persistence.EntityListeners;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -25,24 +23,20 @@ import java.util.Set;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"authors"})
-public class Book {
+@ToString(exclude = {"books"})
+public class Author {
 
     @Id
     @GeneratedValue
     private Long id;
-    private String title;
 
-    @JsonIgnoreProperties({"books"})
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable
-    private Set<Author> authors;
+    private String firstName;
 
-    private Integer year;
+    private String lastName;
 
-    private BigDecimal price;
-
-    private Long coverId;
+    @ManyToMany(fetch = FetchType.EAGER, mappedBy = "authors")
+    @JsonIgnoreProperties({"authors"})
+    private Set<Book> books;
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -50,9 +44,8 @@ public class Book {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public Book(String title, Integer year, BigDecimal price) {
-        this.title = title;
-        this.year = year;
-        this.price = price;
+    public Author(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
     }
 }

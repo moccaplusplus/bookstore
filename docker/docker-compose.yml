@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  db:
+    container_name: bookstore_db
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: bookstore
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: bookstore
+    ports:
+      - 5432:5432

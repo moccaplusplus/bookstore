@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.util.Collections.emptyList;
 
@@ -14,11 +15,11 @@ public interface CatalogUseCase {
 
     List<Book> findAll();
 
-    List<Book> findAllByAuthor(String name);
+    List<Book> findByAuthor(String name);
 
-    List<Book> findAllByTitle(String title);
+    List<Book> findByTitle(String title);
 
-    List<Book> findAllByTitleAndAuthor(String title, String author);
+    List<Book> findByTitleAndAuthor(String title, String author);
 
     Optional<Book> findOneById(Long id);
 
@@ -36,17 +37,11 @@ public interface CatalogUseCase {
 
     void removeBookCover(Long id);
 
-    record AddBookCommand(String title, String author, Integer year, BigDecimal price) {
+    record AddBookCommand(String title, Set<Long> authors, Integer year, BigDecimal price) {
     }
 
     @Builder
-    record UpdateBookCommand(Long id, String title, String author, Integer year, BigDecimal price) {
-        public void updateBook(Book book) {
-            Optional.ofNullable(title).ifPresent(book::setTitle);
-            Optional.ofNullable(author).ifPresent(book::setAuthor);
-            Optional.ofNullable(year).ifPresent(book::setYear);
-            Optional.ofNullable(price).ifPresent(book::setPrice);
-        }
+    record UpdateBookCommand(Long id, String title, Set<Long> authors, Integer year, BigDecimal price) {
     }
 
     record UpdateBookResponse(boolean success, List<String> errors) {

@@ -23,11 +23,13 @@ import pl.szkolaspringa.bookstore.catalog.domain.Book;
 import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/catalog")
@@ -41,12 +43,12 @@ public class CatalogController {
     public List<Book> getAll(@RequestParam Optional<String> author, @RequestParam Optional<String> title) {
         if (author.isPresent()) {
             if (title.isPresent()) {
-                return catalogUseCase.findAllByTitleAndAuthor(title.get(), author.get());
+                return catalogUseCase.findByTitleAndAuthor(title.get(), author.get());
             } else {
-                return catalogUseCase.findAllByAuthor(author.get());
+                return catalogUseCase.findByAuthor(author.get());
             }
         } else if (title.isPresent()) {
-            return catalogUseCase.findAllByTitle(title.get());
+            return catalogUseCase.findByTitle(title.get());
         }
         return catalogUseCase.findAll();
     }
@@ -58,7 +60,7 @@ public class CatalogController {
 
     @PostMapping
     public ResponseEntity<Void> addBook(@Valid @RequestBody BookDto dto) {
-        var command = new CatalogUseCase.AddBookCommand(dto.title(), dto.author(), dto.year(), dto.price());
+        var command = new CatalogUseCase.AddBookCommand(dto.title(), dto.authors(), dto.year(), dto.price());
         var book = catalogUseCase.addBook(command);
         var uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/" + book.getId().toString()).build().toUri();
         return ResponseEntity.created(uri).build();
@@ -67,10 +69,11 @@ public class CatalogController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void updateBook(@PathVariable Long id, @RequestBody BookDto dto) {
-        var command = new CatalogUseCase.UpdateBookCommand(id, dto.title(), dto.author(), dto.year(), dto.price());
+        var command = new CatalogUseCase.UpdateBookCommand(id, dto.title(), dto.authors(), dto.year(), dto.price());
         var result = catalogUseCase.updateBook(command);
-        if (!result.success())
+        if (!result.success()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.join(", ", result.errors()));
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -94,7 +97,7 @@ public class CatalogController {
     }
 
     public record BookDto(
-            @NotBlank String title, @NotBlank String author, @NotNull Integer year,
+            @NotBlank String title, @NotEmpty Set<Long> authors, @NotNull Integer year,
             @NotNull @DecimalMin("0.00") BigDecimal price) {
     }
 }

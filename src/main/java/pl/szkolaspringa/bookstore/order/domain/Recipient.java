@@ -1,11 +1,38 @@
 package pl.szkolaspringa.bookstore.order.domain;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-import javax.validation.constraints.NotBlank;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 
+@Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public record Recipient(
-        @NotBlank String name, @NotBlank String phone, @NotBlank String street, @NotBlank String city,
-        @NotBlank String zipCode, @NotBlank String email) {
+@ToString
+public class Recipient {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String name;
+
+    private String phone;
+
+    private String street;
+
+    private String city;
+
+    private String zipCode;
+
+    private String email;
 }

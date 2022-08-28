@@ -25,6 +25,7 @@ import pl.szkolaspringa.bookstore.order.domain.Recipient;
 
 import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.List;
@@ -60,7 +61,14 @@ public class OrderController {
                                 .map(book -> new OrderItem(book, item.quantity()))
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)))
                         .toList())
-                .recipient(dto.recipient())
+                .recipient(Recipient.builder()
+                        .city(dto.recipient().city())
+                        .email(dto.recipient().email())
+                        .name(dto.recipient().name())
+                        .phone(dto.recipient().phone())
+                        .street(dto.recipient().street())
+                        .zipCode(dto.recipient().zipCode())
+                        .build())
                 .build();
         var result = placeOrderUseCase.placeOrder(command);
         if (result.success()) {
@@ -84,10 +92,15 @@ public class OrderController {
         placeOrderUseCase.removeById(id);
     }
 
-    public record OrderDto(@NotEmpty List<OrderItemDto> items, @NotNull Recipient recipient) {
+    public record OrderDto(@NotEmpty List<OrderItemDto> items, @NotNull RecipientDto recipient) {
     }
 
     public record OrderItemDto(@NotNull Long bookId, @DecimalMin("1") int quantity) {
+    }
+
+    public record RecipientDto(
+            @NotBlank String name, @NotBlank String phone, @NotBlank String street, @NotBlank String city,
+            @NotBlank String zipCode, @NotBlank String email) {
     }
 
     public record UpdateStatusDto(@NotNull OrderStatus status) {

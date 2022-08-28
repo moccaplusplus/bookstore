@@ -23,23 +23,23 @@ public class UploadController {
     private final UploadUseCase uploadUseCase;
 
     @GetMapping("/{id}")
-    public UploadInfoDto getUpload(@PathVariable String id) {
+    public UploadInfoDto getUpload(@PathVariable Long id) {
         return uploadUseCase.getById(id)
                 .map(file -> new UploadInfoDto(
-                        file.id(), file.contentType(), file.fileName(), file.createdAt()))
+                        file.getId(), file.getContentType(), file.getFileName(), file.getCreatedAt()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     @GetMapping("/{id}/file")
-    public ResponseEntity<?> getFile(@PathVariable String id) {
+    public ResponseEntity<?> getFile(@PathVariable Long id) {
         return uploadUseCase.getById(id)
                 .map(file -> ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.fileName() + "\"")
-                        .contentType(MediaType.parseMediaType(file.contentType()))
-                        .body(new ByteArrayResource(file.file())))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
+                        .contentType(MediaType.parseMediaType(file.getContentType()))
+                        .body(new ByteArrayResource(file.getFile())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
-    public record UploadInfoDto(String id, String contentType, String fileName, LocalDateTime createdAt) {
+    public record UploadInfoDto(Long id, String contentType, String fileName, LocalDateTime createdAt) {
     }
 }
