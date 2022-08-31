@@ -1,6 +1,7 @@
 package pl.szkolaspringa.bookstore.catalog.application.port;
 
 import lombok.Builder;
+import org.springframework.transaction.annotation.Transactional;
 import pl.szkolaspringa.bookstore.catalog.domain.Book;
 
 import java.math.BigDecimal;
@@ -26,6 +27,11 @@ public interface CatalogUseCase {
     Optional<Book> findOneByTitle(String title);
 
     Optional<Book> findOneByTitleAndAuthor(String title, String author);
+
+    List<Book> findAllWithAuthors(String title, String author);
+
+    @Transactional(readOnly = true)
+    Optional<Book> findOneWithAuthors(Long id);
 
     Book addBook(AddBookCommand command);
 

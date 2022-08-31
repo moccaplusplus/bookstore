@@ -1,8 +1,8 @@
 package pl.szkolaspringa.bookstore;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase.AddBookCommand;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase.UpdateBookCommand;
@@ -18,23 +18,16 @@ import pl.szkolaspringa.bookstore.order.domain.Recipient;
 import java.math.BigDecimal;
 import java.util.Set;
 
+@Transactional
 @Component
 @RequiredArgsConstructor
-public class ApplicationRunner implements CommandLineRunner {
+public class KitchenSink {
     private final CatalogUseCase catalogUseCase;
     private final PlaceOrderUseCase placeOrderUseCase;
     private final QueryOrderUseCase queryOrderUseCase;
-
     private final AuthorJpaRepository authorJpaRepository;
 
-    @Override
-    public void run(String... args) {
-        initData();
-        searchCatalog();
-        placeOrder();
-    }
-
-    private void initData() {
+    public void initData() {
         var josh = new Author("Joshua", "Bloch");
         var neal = new Author("Neal", "Gafter");
         authorJpaRepository.save(josh);
@@ -43,37 +36,14 @@ public class ApplicationRunner implements CommandLineRunner {
         catalogUseCase.addBook(new AddBookCommand("Java Puzzlers", Set.of(josh.getId(), neal.getId()), 2018, new BigDecimal("99.00")));
     }
 
-    private void searchCatalog() {
+    public void searchCatalog() {
         printByTitle();
         printByAuthor();
         findAndUpdate();
         printByTitle();
     }
 
-    private void printByTitle() {
-        var books = catalogUseCase.findByTitle("Pan");
-        books.stream().limit(10).forEach(System.out::println);
-    }
-
-    private void printByAuthor() {
-        System.out.println("Find by author: \"Josh\"");
-        var books = catalogUseCase.findByAuthor("Josh");
-        books.forEach(System.out::println);
-    }
-
-    private void findAndUpdate() {
-        var status = catalogUseCase.findOneByTitleAndAuthor("Effective Java", "Joshua Bloch")
-                .map(book -> UpdateBookCommand.builder()
-                        .id(book.getId())
-                        .price(new BigDecimal("59.00"))
-                        .build())
-                .map(catalogUseCase::updateBook)
-                .map(UpdateBookResponse::success)
-                .orElse(false);
-        System.out.println("Updating book result: " + status);
-    }
-
-    private void placeOrder() {
+    public void placeOrder() {
         var book1 = catalogUseCase.findOneByTitle("Effective Java").orElseThrow(() -> new IllegalStateException("annot find a book"));
         var book2 = catalogUseCase.findOneByTitle("Java Puzzlers").orElseThrow(() -> new IllegalStateException("annot find a book"));
         var recipient = Recipient.builder()
@@ -93,5 +63,29 @@ public class ApplicationRunner implements CommandLineRunner {
         System.out.println("Created order with id: " + result.orderId());
         queryOrderUseCase.findAll()
                 .forEach(order -> System.out.println("Got order with total price: " + order.totalPrice() + ", details: " + order));
+    }
+
+    private void printByTitle() {
+        System.out.println("Find by title: \"Java\"");
+        var books = catalogUseCase.findByTitle("Java");
+        books.stream().limit(10).forEach(System.out::println);
+    }
+
+    private void printByAuthor() {
+        System.out.println("Find by author: \"Josh\"");
+        var books = catalogUseCase.findByAuthor("Josh");
+        books.forEach(System.out::println);
+    }
+
+    private void findAndUpdate() {
+        var status = catalogUseCase.findOneByTitleAndAuthor("Effective Java", "Joshua Bloch")
+                .map(book -> UpdateBookCommand.builder()
+                        .id(book.getId())
+                        .price(new BigDecimal("59.00"))
+                        .build())
+                .map(catalogUseCase::updateBook)
+                .map(UpdateBookResponse::success)
+                .orElse(false);
+        System.out.println("Updating book result: " + status);
     }
 }

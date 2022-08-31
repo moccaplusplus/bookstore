@@ -28,7 +28,6 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @RestController
@@ -37,29 +36,19 @@ import java.util.Set;
 public class CatalogController {
     private final CatalogUseCase catalogUseCase;
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<Book> getAll(@RequestParam Optional<String> author, @RequestParam Optional<String> title) {
-        if (author.isPresent()) {
-            if (title.isPresent()) {
-                return catalogUseCase.findByTitleAndAuthor(title.get(), author.get());
-            } else {
-                return catalogUseCase.findByAuthor(author.get());
-            }
-        } else if (title.isPresent()) {
-            return catalogUseCase.findByTitle(title.get());
-        }
-        return catalogUseCase.findAll();
+    public List<Book> getAll(@RequestParam(required = false) String author, @RequestParam(required = false) String title) {
+        return catalogUseCase.findAllWithAuthors(title, author);
     }
 
     @GetMapping("/{id}")
     public Book getById(@PathVariable Long id) {
-        return catalogUseCase.findOneById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return catalogUseCase.findOneWithAuthors(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     @PostMapping
-    public ResponseEntity<Void> addBook(@Valid @RequestBody BookDto dto) {
+    public ResponseEntity<?> addBook(@Valid @RequestBody CatalogController.BookSaveDto dto) {
         var command = new CatalogUseCase.AddBookCommand(dto.title(), dto.authors(), dto.year(), dto.price());
         var book = catalogUseCase.addBook(command);
         var uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/" + book.getId().toString()).build().toUri();
@@ -68,7 +57,7 @@ public class CatalogController {
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void updateBook(@PathVariable Long id, @RequestBody BookDto dto) {
+    public void updateBook(@PathVariable Long id, @RequestBody BookSaveDto dto) {
         var command = new CatalogUseCase.UpdateBookCommand(id, dto.title(), dto.authors(), dto.year(), dto.price());
         var result = catalogUseCase.updateBook(command);
         if (!result.success()) {
@@ -96,8 +85,7 @@ public class CatalogController {
         catalogUseCase.removeBookCover(id);
     }
 
-    public record BookDto(
-            @NotBlank String title, @NotEmpty Set<Long> authors, @NotNull Integer year,
-            @NotNull @DecimalMin("0.00") BigDecimal price) {
+    public record BookSaveDto(@NotBlank String title, @NotEmpty Set<Long> authors, @NotNull Integer year,
+                              @NotNull @DecimalMin("0.00") BigDecimal price) {
     }
 }

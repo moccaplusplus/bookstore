@@ -18,6 +18,6 @@ public class AuthorsController {
 
     @GetMapping
     public List<Author> getAll() {
-        return authorUseCase.findAll();
+        return authorUseCase.findAllEager();
     }
 }

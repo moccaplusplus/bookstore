@@ -5,47 +5,44 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import pl.szkolaspringa.bookstore.BaseEntity;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.ManyToMany;
-import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
+import static javax.persistence.CascadeType.MERGE;
+import static javax.persistence.CascadeType.PERSIST;
+
 @Entity
-@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"books"})
-public class Author {
-
-    @Id
-    @GeneratedValue
-    private Long id;
+@ToString
+public class Author extends BaseEntity<Long> {
 
     private String firstName;
 
     private String lastName;
 
-    @ManyToMany(fetch = FetchType.EAGER, mappedBy = "authors")
+    @ManyToMany(cascade = {MERGE, PERSIST}, mappedBy = "authors")
     @JsonIgnoreProperties({"authors"})
-    private Set<Book> books;
-
-    @CreatedDate
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+    @ToString.Exclude
+    private Set<Book> books = new HashSet<>();
 
     public Author(String firstName, String lastName) {
         this.firstName = firstName;
         this.lastName = lastName;
+    }
+
+    public void addBook(Book book) {
+        books.add(book);
+        book.getAuthors().add(this);
+    }
+
+    public void removeBook(Book book) {
+        books.remove(book);
+        book.getAuthors().remove(this);
     }
 }

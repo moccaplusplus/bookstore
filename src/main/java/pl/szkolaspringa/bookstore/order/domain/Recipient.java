@@ -6,10 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import pl.szkolaspringa.bookstore.BaseEntity;
 
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 
 @Entity
 @Getter
@@ -18,11 +17,7 @@ import javax.persistence.Id;
 @AllArgsConstructor
 @Builder
 @ToString
-public class Recipient {
-
-    @Id
-    @GeneratedValue
-    private Long id;
+public class Recipient extends BaseEntity<Long> {
 
     private String name;
 

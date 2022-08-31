@@ -2,10 +2,12 @@ package pl.szkolaspringa.bookstore.order.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pl.szkolaspringa.bookstore.order.application.port.PlaceOrderUseCase;
 import pl.szkolaspringa.bookstore.order.db.OrderJpaRepository;
 import pl.szkolaspringa.bookstore.order.domain.Order;
 
+@Transactional
 @Service
 @RequiredArgsConstructor
 public class PlaceOrderService implements PlaceOrderUseCase {
@@ -26,7 +28,6 @@ public class PlaceOrderService implements PlaceOrderUseCase {
     public UpdateStatusResponse updateStatus(UpdateStatusCommand command) {
         return orderJpaRepository.findById(command.id()).map(order -> {
             order.setStatus(command.status());
-            orderJpaRepository.save(order);
             return UpdateStatusResponse.SUCCESS;
         }).orElseGet(() -> UpdateStatusResponse.errorResponse("Order not found"));
     }

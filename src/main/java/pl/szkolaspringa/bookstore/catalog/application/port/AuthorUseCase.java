@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface AuthorUseCase {
     List<Author> findAll();
+
+    List<Author> findAllEager();
 }

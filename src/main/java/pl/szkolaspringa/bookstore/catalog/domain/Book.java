@@ -5,38 +5,30 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import pl.szkolaspringa.bookstore.BaseEntity;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"authors"})
-public class Book {
+@ToString
+public class Book extends BaseEntity<Long> {
 
-    @Id
-    @GeneratedValue
-    private Long id;
     private String title;
 
     @JsonIgnoreProperties({"books"})
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable
-    private Set<Author> authors;
+    @ToString.Exclude
+    private Set<Author> authors = new HashSet<>();
 
     private Integer year;
 
@@ -44,15 +36,24 @@ public class Book {
 
     private Long coverId;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
-
     public Book(String title, Integer year, BigDecimal price) {
         this.title = title;
         this.year = year;
         this.price = price;
+    }
+
+    public void addAuthor(Author author) {
+        authors.add(author);
+        author.getBooks().add(this);
+    }
+
+    public void removeAuthor(Author author) {
+        authors.remove(author);
+        author.getBooks().remove(this);
+    }
+
+    public void clearAuthors() {
+        authors.forEach(author -> author.getBooks().remove(this));
+        authors.clear();
     }
 }
