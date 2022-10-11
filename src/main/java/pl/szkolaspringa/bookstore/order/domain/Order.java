@@ -48,4 +48,9 @@ public class Order extends BaseEntity<Long> {
                 .map(item -> item.getBook().getPrice().multiply(new BigDecimal(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+
+    public void updateStatus(OrderStatus targetStatus) {
+        status.assertTransitionValid(targetStatus);
+        status = targetStatus;
+    }
 }

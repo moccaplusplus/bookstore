@@ -1,6 +1,8 @@
 package pl.szkolaspringa.bookstore.catalog.web;
 
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase;
+import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase.FileInfo;
 import pl.szkolaspringa.bookstore.catalog.domain.Book;
 
 import javax.validation.Valid;
@@ -25,11 +28,13 @@ import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.PositiveOrZero;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @RestController
 @RequestMapping("/catalog")
 @RequiredArgsConstructor
@@ -48,9 +53,8 @@ public class CatalogController {
     }
 
     @PostMapping
-    public ResponseEntity<?> addBook(@Valid @RequestBody CatalogController.BookSaveDto dto) {
-        var command = new CatalogUseCase.AddBookCommand(dto.title(), dto.authors(), dto.year(), dto.price());
-        var book = catalogUseCase.addBook(command);
+    public ResponseEntity<?> addBook(@Valid @RequestBody BookSaveDto dto) {
+        var book = catalogUseCase.addBook(dto);
         var uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/" + book.getId().toString()).build().toUri();
         return ResponseEntity.created(uri).build();
     }
@@ -58,11 +62,7 @@ public class CatalogController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void updateBook(@PathVariable Long id, @RequestBody BookSaveDto dto) {
-        var command = new CatalogUseCase.UpdateBookCommand(id, dto.title(), dto.authors(), dto.year(), dto.price());
-        var result = catalogUseCase.updateBook(command);
-        if (!result.success()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.join(", ", result.errors()));
-        }
+        catalogUseCase.updateBook(id, dto);
     }
 
     @DeleteMapping("/{id}")
@@ -74,9 +74,9 @@ public class CatalogController {
     @PutMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void addBookCover(@PathVariable Long id, @RequestParam("file") MultipartFile file) throws IOException {
-        System.out.println("Got file:" + file.getOriginalFilename());
-        var command = new CatalogUseCase.UpdateBookCoverCommand(id, file.getBytes(), file.getContentType(), file.getOriginalFilename());
-        catalogUseCase.updateBookCover(command);
+        log.info("Got file:" + file.getOriginalFilename());
+        var fileInfo = new FileInfo(file.getBytes(), file.getContentType(), file.getOriginalFilename());
+        catalogUseCase.updateBookCover(id, fileInfo);
     }
 
     @DeleteMapping("/{id}/cover")
@@ -85,7 +85,9 @@ public class CatalogController {
         catalogUseCase.removeBookCover(id);
     }
 
-    public record BookSaveDto(@NotBlank String title, @NotEmpty Set<Long> authors, @NotNull Integer year,
-                              @NotNull @DecimalMin("0.00") BigDecimal price) {
+    @Builder
+    public record BookSaveDto(
+            @NotBlank String title, @NotEmpty Set<Long> authors, @NotNull Integer year,
+            @NotNull @DecimalMin("0.00") BigDecimal price, @NotNull @PositiveOrZero Long available) {
     }
 }

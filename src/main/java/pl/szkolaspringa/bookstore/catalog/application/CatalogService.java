@@ -1,6 +1,7 @@
 package pl.szkolaspringa.bookstore.catalog.application;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase;
@@ -8,8 +9,9 @@ import pl.szkolaspringa.bookstore.catalog.db.AuthorJpaRepository;
 import pl.szkolaspringa.bookstore.catalog.db.BookJpaRepository;
 import pl.szkolaspringa.bookstore.catalog.domain.Author;
 import pl.szkolaspringa.bookstore.catalog.domain.Book;
-import pl.szkolaspringa.bookstore.upload.application.port.UploadUseCase;
-import pl.szkolaspringa.bookstore.upload.application.port.UploadUseCase.SaveUploadCommand;
+import pl.szkolaspringa.bookstore.catalog.web.CatalogController.BookSaveDto;
+import pl.szkolaspringa.bookstore.upload.db.UploadJpaRepository;
+import pl.szkolaspringa.bookstore.upload.domain.Upload;
 
 import java.util.Collection;
 import java.util.List;
@@ -19,13 +21,14 @@ import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CatalogService implements CatalogUseCase {
 
     private final AuthorJpaRepository authorJpaRepository;
     private final BookJpaRepository bookJpaRepository;
-    private final UploadUseCase uploadUseCase;
+    private final UploadJpaRepository uploadJpaRepository;
 
     @Transactional(readOnly = true)
     @Override
@@ -83,9 +86,9 @@ public class CatalogService implements CatalogUseCase {
 
     @Transactional
     @Override
-    public Book addBook(AddBookCommand command) {
-        var book = new Book(command.title(), command.year(), command.price());
-        book.setAuthors(command.authors().stream().map(authorJpaRepository::getReferenceById).collect(toSet()));
+    public Book addBook(BookSaveDto dto) {
+        var book = new Book(dto.title(), dto.year(), dto.price(), dto.available());
+        book.setAuthors(dto.authors().stream().map(authorJpaRepository::getReferenceById).collect(toSet()));
 //        var authors = fetchAuthorsByIds(command.authors());
 //        authors.forEach(book::addAuthor);
         return bookJpaRepository.save(book);
@@ -93,16 +96,15 @@ public class CatalogService implements CatalogUseCase {
 
     @Transactional
     @Override
-    public UpdateBookResponse updateBook(UpdateBookCommand command) {
-        return bookJpaRepository.findById(command.id()).map(book -> {
-            Optional.of(command).map(UpdateBookCommand::title).ifPresent(book::setTitle);
-            Optional.of(command).map(UpdateBookCommand::year).ifPresent(book::setYear);
-            Optional.of(command).map(UpdateBookCommand::price).ifPresent(book::setPrice);
-            Optional.of(command).map(UpdateBookCommand::authors)
-                    .map(authorIds -> authorIds.stream().map(authorJpaRepository::getReferenceById).collect(toSet()))
-                    .ifPresent(book::setAuthors);
-            return UpdateBookResponse.SUCCESS;
-        }).orElseGet(() -> UpdateBookResponse.errorResponse("Book not found"));
+    public void updateBook(Long id, BookSaveDto dto) {
+        var book = bookJpaRepository.findById(id).orElseThrow();
+        Optional.of(dto).map(BookSaveDto::title).ifPresent(book::setTitle);
+        Optional.of(dto).map(BookSaveDto::year).ifPresent(book::setReleaseYear);
+        Optional.of(dto).map(BookSaveDto::price).ifPresent(book::setPrice);
+        Optional.of(dto).map(BookSaveDto::available).ifPresent(book::setAvailable);
+        Optional.of(dto).map(BookSaveDto::authors)
+                .map(authorIds -> authorIds.stream().map(authorJpaRepository::getReferenceById).collect(toSet()))
+                .ifPresent(book::setAuthors);
     }
 
     @Transactional
@@ -113,26 +115,29 @@ public class CatalogService implements CatalogUseCase {
 
     @Transactional
     @Override
-    public void updateBookCover(UpdateBookCoverCommand command) {
-        bookJpaRepository.findById(command.id()).ifPresent(book -> {
-            var cmd = new SaveUploadCommand(command.fileName(), command.file(), command.contentType());
-            var saved = uploadUseCase.save(cmd);
-            book.setCoverId(saved.getId());
-        });
+    public void updateBookCover(Long id, FileInfo fileInfo) {
+        var book = bookJpaRepository.findById(id).orElseThrow();
+        if (book.getCover() == null) book.setCover(new Upload());
+        var cover = book.getCover();
+        cover.setFile(fileInfo.file());
+        cover.setContentType(fileInfo.contentType());
+        cover.setFilename(fileInfo.fileName());
     }
 
     @Transactional
     @Override
     public void removeBookCover(Long id) {
-        bookJpaRepository.findById(id).ifPresent(book -> Optional.ofNullable(book.getCoverId()).ifPresent(coverId -> {
-            uploadUseCase.removeById(coverId);
-            book.setCoverId(null);
-        }));
+        var book = bookJpaRepository.findById(id).orElseThrow();
+        var cover = book.getCover();
+        if (cover != null) {
+            book.setCover(null);
+            uploadJpaRepository.delete(cover);
+        }
     }
 
     private List<Author> fetchAuthorsByIds(Collection<Long> authorIds) {
         var authors = authorJpaRepository.findAllById(authorIds);
-        System.out.println("Authors: " + authors);
+        log.info("Authors: " + authors);
         if (authors.size() < authorIds.size()) {
             var missingAuthorIds = authorIds.stream()
                     .filter(not(authors.stream().map(Author::getId).collect(toSet())::contains))

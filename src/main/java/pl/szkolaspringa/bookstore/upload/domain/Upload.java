@@ -7,17 +7,19 @@ import lombok.Setter;
 import pl.szkolaspringa.bookstore.BaseEntity;
 
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(UploadEntityListener.class)
 public class Upload extends BaseEntity<Long> {
 
-    private byte[] file;
+    private transient byte[] file;
 
     private String contentType;
 
-    private String fileName;
+    private String filename;
 }

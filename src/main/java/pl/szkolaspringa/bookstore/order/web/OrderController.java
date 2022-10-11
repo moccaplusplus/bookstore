@@ -1,8 +1,12 @@
 package pl.szkolaspringa.bookstore.order.web;
 
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.Singular;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,21 +20,19 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase;
 import pl.szkolaspringa.bookstore.order.application.port.PlaceOrderUseCase;
-import pl.szkolaspringa.bookstore.order.application.port.PlaceOrderUseCase.UpdateStatusCommand;
 import pl.szkolaspringa.bookstore.order.application.port.QueryOrderUseCase;
 import pl.szkolaspringa.bookstore.order.domain.Order;
 import pl.szkolaspringa.bookstore.order.domain.OrderItem;
 import pl.szkolaspringa.bookstore.order.domain.OrderStatus;
-import pl.szkolaspringa.bookstore.order.domain.Recipient;
 
 import javax.validation.Valid;
+import javax.validation.ValidationException;
 import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
-import static pl.szkolaspringa.bookstore.order.application.port.PlaceOrderUseCase.PlaceOrderCommand;
+import static pl.szkolaspringa.bookstore.order.web.RecipientController.RecipientDto;
 
 @RestController
 @RequestMapping("/orders")
@@ -43,47 +45,33 @@ public class OrderController {
 
     private final QueryOrderUseCase queryOrderUseCase;
 
+    @Transactional(readOnly = true)
     @GetMapping
-    public List<Order> getAll() {
-        return queryOrderUseCase.findAll();
+    public List<OrderInfoDto> getAll() {
+        return queryOrderUseCase.findAll().stream().map(OrderInfoDto::of).toList();
     }
 
+    @Transactional(readOnly = true)
     @GetMapping("/{id}")
-    public Order getOne(@PathVariable Long id) {
-        return queryOrderUseCase.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public OrderInfoDto getOne(@PathVariable Long id) {
+        return queryOrderUseCase.findById(id).map(OrderInfoDto::of)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     @PostMapping
-    public ResponseEntity<?> createNewOrder(@Valid @RequestBody OrderDto dto) {
-        var command = PlaceOrderCommand.builder()
-                .items(dto.items().stream()
-                        .map(item -> catalogUseCase.findOneById(item.bookId())
-                                .map(book -> new OrderItem(book, item.quantity()))
-                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)))
-                        .toList())
-                .recipient(Recipient.builder()
-                        .city(dto.recipient().city())
-                        .email(dto.recipient().email())
-                        .name(dto.recipient().name())
-                        .phone(dto.recipient().phone())
-                        .street(dto.recipient().street())
-                        .zipCode(dto.recipient().zipCode())
-                        .build())
-                .build();
-        var result = placeOrderUseCase.placeOrder(command);
-        if (result.success()) {
-            var uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/" + result.orderId().toString()).build().toUri();
-            return ResponseEntity.created(uri).build();
-        } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+    public ResponseEntity<?> createNewOrder(@Validated @RequestBody OrderDto orderDto) {
+        if (orderDto.recipient() == null && orderDto.recipientId() == null) {
+            throw new ValidationException("Either recipient data or id should be present");
         }
+        var order = placeOrderUseCase.placeOrder(orderDto);
+        var uri = ServletUriComponentsBuilder.fromCurrentRequest().pathSegment(order.getId().toString()).build().toUri();
+        return ResponseEntity.created(uri).build();
     }
 
     @PutMapping("/{id}/status")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void updateOrderStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusDto dto) {
-        var result = placeOrderUseCase.updateStatus(new UpdateStatusCommand(id, dto.status()));
-        if (!result.success()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        placeOrderUseCase.updateStatus(id, dto.status());
     }
 
     @DeleteMapping("/{id}")
@@ -92,17 +80,27 @@ public class OrderController {
         placeOrderUseCase.removeById(id);
     }
 
-    public record OrderDto(@NotEmpty List<OrderItemDto> items, @NotNull RecipientDto recipient) {
+    @Builder
+    public record OrderDto(@Singular @NotEmpty List<OrderItemDto> items, RecipientDto recipient, Long recipientId) {
+    }
+
+    public record OrderInfoDto(Long id, OrderStatus orderStatus, List<OrderItemDto> items, Long recipientId) {
+        public static OrderInfoDto of(Order order) {
+            return new OrderInfoDto(
+                    order.getId(),
+                    order.getStatus(),
+                    order.getItems().stream().map(OrderItemDto::of).toList(),
+                    order.getRecipient().getId());
+        }
     }
 
     public record OrderItemDto(@NotNull Long bookId, @DecimalMin("1") int quantity) {
-    }
-
-    public record RecipientDto(
-            @NotBlank String name, @NotBlank String phone, @NotBlank String street, @NotBlank String city,
-            @NotBlank String zipCode, @NotBlank String email) {
+        public static OrderItemDto of(OrderItem orderItem) {
+            return new OrderItemDto(orderItem.getBook().getId(), orderItem.getQuantity());
+        }
     }
 
     public record UpdateStatusDto(@NotNull OrderStatus status) {
     }
+
 }

@@ -9,7 +9,7 @@ import pl.szkolaspringa.bookstore.BaseEntity;
 import pl.szkolaspringa.bookstore.catalog.domain.Book;
 
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
@@ -23,6 +23,7 @@ import javax.persistence.Table;
 public class OrderItem extends BaseEntity<Long> {
 
     @ManyToOne
+    @JoinColumn(name = "book_id")
     private Book book;
 
     private int quantity;

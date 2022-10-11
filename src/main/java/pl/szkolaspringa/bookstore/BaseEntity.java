@@ -1,8 +1,8 @@
 package pl.szkolaspringa.bookstore;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -17,6 +17,7 @@ import java.util.Objects;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity<T> {
@@ -38,13 +39,14 @@ public abstract class BaseEntity<T> {
     public boolean equals(Object obj) {
         if (id == null) return obj == this;
         // we must take proxy classes into account!
-        if (!getClass().isInstance(obj) && !obj.getClass().isInstance(this)) return false;
-        return Objects.equals(id, ((BaseEntity<?>) obj).id);
+        if (getClass().isAssignableFrom(obj.getClass()) || obj.getClass().isAssignableFrom(getClass())) {
+            return Objects.equals(id, ((BaseEntity<?>) obj).id);
+        }
+        return false;
     }
 
     @Override
     public int hashCode() {
-        // must be fixed -> hibernate will update id (which is crucial for equality check) when saving set of entities.
-        return 177745327;
+        return getClass().hashCode();
     }
 }

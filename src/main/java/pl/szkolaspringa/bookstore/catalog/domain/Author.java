@@ -1,6 +1,7 @@
 package pl.szkolaspringa.bookstore.catalog.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,6 +20,7 @@ import static javax.persistence.CascadeType.PERSIST;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @ToString
 public class Author extends BaseEntity<Long> {
 
