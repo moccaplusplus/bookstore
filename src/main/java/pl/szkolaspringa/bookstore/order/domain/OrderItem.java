@@ -12,6 +12,7 @@ import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.validation.constraints.Positive;
 
 @Entity
 @Table(name = "purchase_item")
@@ -26,5 +27,6 @@ public class OrderItem extends BaseEntity<Long> {
     @JoinColumn(name = "book_id")
     private Book book;
 
+    @Positive
     private int quantity;
 }

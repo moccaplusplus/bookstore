@@ -95,11 +95,7 @@ public class CatalogInitializerService implements CatalogInitializerUseCase {
     }
 
     private Author getOrCreateAuthor(String name) {
-        return authorJpaRepository.findByNameIgnoreCase(name).orElseGet(() -> {
-            var p = name.lastIndexOf(" ");
-            return p > 0 ? new Author(name.substring(0, p).trim(), name.substring(p + 1).trim()) :
-                    new Author(null, name);
-        });
+        return authorJpaRepository.findByNameIgnoreCase(name).orElseGet(() -> Author.of(name));
     }
 
     private void placeOrder() {
@@ -121,7 +117,7 @@ public class CatalogInitializerService implements CatalogInitializerUseCase {
         order = orderJpaRepository.save(order);
         log.info("Created order with id: " + order.getId());
         orderJpaRepository.findAll().stream()
-                .map(o -> "Got order with total price: " + o.totalPrice() + ", details: " + o)
+                .map(o -> "Got order with total price: " + o.getItemsPrice() + ", details: " + o)
                 .forEach(log::info);
     }
 

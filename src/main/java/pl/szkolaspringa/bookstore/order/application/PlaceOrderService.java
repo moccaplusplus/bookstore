@@ -13,6 +13,9 @@ import pl.szkolaspringa.bookstore.order.domain.OrderItem;
 import pl.szkolaspringa.bookstore.order.domain.OrderStatus;
 import pl.szkolaspringa.bookstore.order.web.OrderController.OrderDto;
 
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Validator;
+
 @Transactional
 @Service
 @RequiredArgsConstructor
@@ -26,16 +29,26 @@ public class PlaceOrderService implements PlaceOrderUseCase {
 
     private final RecipientUseCase recipientUseCase;
 
+    private final Validator validator;
+
     @Override
     public Order placeOrder(OrderDto orderDto) {
         var items = orderDto.items().stream()
-                .map(itemDto -> new OrderItem(bookJpaRepository.getReferenceById(itemDto.bookId()), itemDto.quantity()))
+                .map(itemDto -> new OrderItem(
+                        bookJpaRepository.findById(itemDto.bookId())
+                                .orElseThrow(() -> new EntityNotFoundException("Book with id: " + itemDto.bookId() + " does not exist")),
+                        itemDto.quantity()))
                 .toList();
         var recipient = orderDto.recipient() == null ?
                 recipientJpaRepository.getReferenceById(orderDto.recipientId()) :
                 recipientUseCase.getOrCreateRecipient(orderDto.recipient());
-        var order = Order.builder().items(items).recipient(recipient).build();
-        order = orderJpaRepository.save(order);
+        var order = Order.builder()
+                .items(items)
+                .recipient(recipient)
+                .delivery(orderDto.delivery())
+                .build();
+        validator.validate(order);
+        order = orderJpaRepository.saveAndFlush(order);
         order.getItems().forEach(orderItem -> orderItem.getBook().removeAvailable(orderItem.getQuantity()));
         return order;
     }

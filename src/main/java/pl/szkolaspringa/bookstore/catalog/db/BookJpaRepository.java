@@ -17,7 +17,7 @@ public interface BookJpaRepository extends JpaRepository<Book, Long> {
             "lower(concat(a.firstName, ' ', a.lastName)) LIKE lower(concat('%', :author, '%'))")
     List<Book> findByAuthor(@Param("author") String author);
 
-    @Query("SELECT b FROM Book b JOIN b.authors a WHERE " +
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN b.authors a WHERE " +
             "lower(b.title) LIKE lower(concat('%', :title, '%'))" +
             "AND " +
             "lower(concat(a.firstName, ' ', a.lastName)) LIKE lower(concat('%', :author, '%'))")
@@ -26,18 +26,18 @@ public interface BookJpaRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b WHERE lower(b.title) LIKE lower(concat('%', :title, '%'))")
     Optional<Book> findOneByTitle(@Param("title") String title);
 
-    @Query("SELECT b FROM Book b JOIN b.authors a WHERE " +
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN b.authors a WHERE " +
             "lower(b.title) LIKE lower(concat('%', :title, '%'))" +
             "AND " +
             "lower(concat(a.firstName, ' ', a.lastName)) LIKE lower(concat('%', :author, '%'))")
     Optional<Book> findOneByTitleAndAuthor(@Param("title") String title, @Param("author") String author);
 
-    @Query("SELECT DISTINCT b FROM Book b JOIN FETCH b.authors a WHERE " +
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.authors a WHERE " +
             "( :title IS NULL OR lower(b.title) LIKE lower(concat('%', :title, '%')) )" +
             "AND " +
             "( :author IS NULL OR lower(concat(a.firstName, ' ', a.lastName)) LIKE lower(concat('%', :author, '%')) )")
     List<Book> findAllWithAuthors(@Param("title") String title, @Param("author") String author);
 
-    @Query("SELECT DISTINCT b FROM Book b JOIN FETCH b.authors a WHERE b.id=:id")
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.authors a WHERE b.id=:id")
     Optional<Book> findOneWithAuthors(@Param("id") Long id);
 }

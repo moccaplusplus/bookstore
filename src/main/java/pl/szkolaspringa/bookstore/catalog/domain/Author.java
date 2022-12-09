@@ -24,6 +24,12 @@ import static javax.persistence.CascadeType.PERSIST;
 @ToString
 public class Author extends BaseEntity<Long> {
 
+    public static Author of(String name) {
+        var p = name.lastIndexOf(" ");
+        return p > 0 ? new Author(name.substring(0, p).trim(), name.substring(p + 1).trim()) :
+                new Author(null, name);
+    }
+
     private String firstName;
 
     private String lastName;

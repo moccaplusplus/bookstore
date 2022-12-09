@@ -88,7 +88,9 @@ public class CatalogService implements CatalogUseCase {
     @Override
     public Book addBook(BookSaveDto dto) {
         var book = new Book(dto.title(), dto.year(), dto.price(), dto.available());
-        book.setAuthors(dto.authors().stream().map(authorJpaRepository::getReferenceById).collect(toSet()));
+        if (!dto.authors().isEmpty()) {
+            book.setAuthors(dto.authors().stream().map(authorJpaRepository::getReferenceById).collect(toSet()));
+        }
 //        var authors = fetchAuthorsByIds(command.authors());
 //        authors.forEach(book::addAuthor);
         return bookJpaRepository.save(book);

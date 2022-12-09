@@ -6,7 +6,6 @@ import lombok.Singular;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +20,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import pl.szkolaspringa.bookstore.catalog.application.port.CatalogUseCase;
 import pl.szkolaspringa.bookstore.order.application.port.PlaceOrderUseCase;
 import pl.szkolaspringa.bookstore.order.application.port.QueryOrderUseCase;
+import pl.szkolaspringa.bookstore.order.application.price.OrderPrice;
+import pl.szkolaspringa.bookstore.order.application.price.PriceService;
+import pl.szkolaspringa.bookstore.order.domain.Delivery;
 import pl.szkolaspringa.bookstore.order.domain.Order;
 import pl.szkolaspringa.bookstore.order.domain.OrderItem;
 import pl.szkolaspringa.bookstore.order.domain.OrderStatus;
@@ -45,21 +47,26 @@ public class OrderController {
 
     private final QueryOrderUseCase queryOrderUseCase;
 
+    private final PriceService priceService;
+
     @Transactional(readOnly = true)
     @GetMapping
     public List<OrderInfoDto> getAll() {
-        return queryOrderUseCase.findAll().stream().map(OrderInfoDto::of).toList();
+        return queryOrderUseCase.findAll().stream()
+                .map(order -> OrderInfoDto.of(order, priceService.calculatePrice(order)))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     @GetMapping("/{id}")
     public OrderInfoDto getOne(@PathVariable Long id) {
-        return queryOrderUseCase.findById(id).map(OrderInfoDto::of)
+        return queryOrderUseCase.findById(id)
+                .map(order -> OrderInfoDto.of(order, priceService.calculatePrice(order)))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     @PostMapping
-    public ResponseEntity<?> createNewOrder(@Validated @RequestBody OrderDto orderDto) {
+    public ResponseEntity<?> createNewOrder(@Valid @RequestBody OrderDto orderDto) {
         if (orderDto.recipient() == null && orderDto.recipientId() == null) {
             throw new ValidationException("Either recipient data or id should be present");
         }
@@ -81,16 +88,17 @@ public class OrderController {
     }
 
     @Builder
-    public record OrderDto(@Singular @NotEmpty List<OrderItemDto> items, RecipientDto recipient, Long recipientId) {
+    public record OrderDto(@Singular @NotEmpty List<OrderItemDto> items, RecipientDto recipient, Long recipientId, Delivery delivery) {
     }
 
-    public record OrderInfoDto(Long id, OrderStatus orderStatus, List<OrderItemDto> items, Long recipientId) {
-        public static OrderInfoDto of(Order order) {
+    public record OrderInfoDto(Long id, OrderStatus orderStatus, List<OrderItemDto> items, Long recipientId, OrderPrice orderPrice) {
+        public static OrderInfoDto of(Order order, OrderPrice orderPrice) {
             return new OrderInfoDto(
                     order.getId(),
                     order.getStatus(),
                     order.getItems().stream().map(OrderItemDto::of).toList(),
-                    order.getRecipient().getId());
+                    order.getRecipient().getId(),
+                    orderPrice);
         }
     }
 

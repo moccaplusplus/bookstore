@@ -2,6 +2,7 @@ package pl.szkolaspringa.bookstore.catalog.web;
 
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.Singular;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -87,7 +88,7 @@ public class CatalogController {
 
     @Builder
     public record BookSaveDto(
-            @NotBlank String title, @NotEmpty Set<Long> authors, @NotNull Integer year,
+            @NotBlank String title, @Singular @NotEmpty Set<Long> authors, @NotNull Integer year,
             @NotNull @DecimalMin("0.00") BigDecimal price, @NotNull @PositiveOrZero Long available) {
     }
 }
